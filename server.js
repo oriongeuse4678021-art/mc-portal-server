@@ -6,34 +6,33 @@ const server = http.createServer((req, res) => {
   res.end('OK');
 });
 
-const wss = new WebSocket.Server({ server });
+const wss = new WebSocket.Server({ 
+  server,
+  handleProtocols: () => 'com.microsoft.minecraft.wsencrypt'
+});
 
-wss.on('connection', (ws) => {
-  console.log('接続されました！');
+wss.on('connection', (ws, req) => {
+  console.log('接続されました！', req.headers);
 
   ws.on('message', (data) => {
     try {
       const msg = JSON.parse(data.toString());
       console.log('受信:', JSON.stringify(msg));
 
-      const purpose = msg.header?.messagePurpose;
-
-      if (purpose === 'subscribe') {
-        ws.send(JSON.stringify({
-          body: { statusCode: 0 },
-          header: {
-            messagePurpose: 'commandResponse',
-            requestId: msg.header?.requestId || '',
-            version: 1
-          }
-        }));
-      }
+      ws.send(JSON.stringify({
+        body: { statusCode: 0 },
+        header: {
+          messagePurpose: 'commandResponse',
+          requestId: msg.header?.requestId || '',
+          version: 1
+        }
+      }));
     } catch(e) {
       console.log('エラー:', e);
     }
   });
 
-  ws.on('close', () => console.log('切断'));
+  ws.on('close', (code, reason) => console.log('切断:', code, reason.toString()));
   ws.on('error', (e) => console.log('エラー:', e));
 });
 
